@@ -1,4 +1,4 @@
-use crate::control_flow::nodes_mut::ViewMut;
+use crate::control_flow::NodesMut;
 
 use super::{branch::Branch, repeat::Repeat, strongly_connected_finder::StronglyConnectedFinder};
 
@@ -18,15 +18,15 @@ impl Linear {
 		}
 	}
 
-	pub fn restructure<N: ViewMut>(&mut self, nodes: &mut N, set: &[usize]) {
-		let start = self.repeat_restructurer.restructure(nodes, set);
+	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N) {
+		let start = self.repeat_restructurer.restructure(nodes);
 
 		nodes.remove_node(start);
 
-		let strong = self.strongly_connected_finder.run(nodes, set);
+		let strong = self.strongly_connected_finder.run(nodes);
 
 		for scc in std::mem::take(strong) {
-			self.restructure(nodes, &scc);
+			self.restructure(&mut nodes.view_mut(scc));
 		}
 
 		let list: Vec<_> = nodes.successors(start).collect();

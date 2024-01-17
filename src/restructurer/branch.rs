@@ -1,4 +1,4 @@
-use crate::control_flow::nodes_mut::ViewMut;
+use crate::control_flow::NodesMut;
 
 pub struct Branch {}
 
@@ -7,7 +7,7 @@ impl Branch {
 		Self {}
 	}
 
-	pub fn restructure<N: ViewMut>(&mut self, nodes: &mut N, start: usize) {}
+	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N, start: usize) {}
 }
 
 impl Default for Branch {

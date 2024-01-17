@@ -1,7 +1,4 @@
-use crate::control_flow::{
-	nodes::Nodes,
-	nodes_mut::{Var, ViewMut},
-};
+use crate::control_flow::{Nodes, NodesMut, Var};
 
 pub struct Repeat {
 	point_in: Vec<usize>,
@@ -20,27 +17,27 @@ impl Repeat {
 		}
 	}
 
-	fn find_set_bonds<N: Nodes>(&mut self, nodes: &N, set: &[usize]) {
+	fn find_set_bonds<N: Nodes>(&mut self, nodes: &N) {
 		self.point_in.clear();
 		self.point_out.clear();
 
 		for id in nodes.iter() {
-			if nodes.predecessors(id).any(|id| !set.contains(&id)) {
+			if nodes.predecessors(id).any(|id| !nodes.contains(id)) {
 				self.point_in.push(id);
 			}
 
-			if nodes.successors(id).any(|id| !set.contains(&id)) {
+			if nodes.successors(id).any(|id| !nodes.contains(id)) {
 				self.point_out.push(id);
 			}
 		}
 	}
 
-	fn restructure_continues<N: ViewMut>(&mut self, nodes: &mut N, set: &[usize], handler: usize) {
+	fn restructure_continues<N: NodesMut>(&mut self, nodes: &mut N, handler: usize) {
 		// Predecessor -> Entry
 		// Predecessor -> Destination -> Repetition -> Selection -> Entry
 		for (index, &id) in self.point_in.iter().enumerate() {
 			self.vec_usize
-				.extend(nodes.predecessors(id).filter(|id| set.contains(id)));
+				.extend(nodes.predecessors(id).filter(|&id| nodes.contains(id)));
 
 			for predecessor in self.vec_usize.drain(..) {
 				let repetition = nodes.add_assignment(Var::B, 1, handler);
@@ -51,7 +48,7 @@ impl Repeat {
 		}
 	}
 
-	fn restructure_start<N: ViewMut>(&mut self, nodes: &mut N, set: &[usize]) -> usize {
+	fn restructure_start<N: NodesMut>(&mut self, nodes: &mut N) -> usize {
 		let selection = nodes.add_selection(Var::A);
 
 		// Predecessor -> Entry
@@ -62,7 +59,7 @@ impl Repeat {
 			nodes.add_link(selection, entry);
 
 			self.vec_usize
-				.extend(nodes.predecessors(entry).filter(|id| !set.contains(id)));
+				.extend(nodes.predecessors(entry).filter(|&id| !nodes.contains(id)));
 
 			for predecessor in self.vec_usize.drain(..) {
 				nodes.replace_link(predecessor, entry, assignment);
@@ -72,19 +69,14 @@ impl Repeat {
 		selection
 	}
 
-	fn restructure_end<N: ViewMut>(
-		&mut self,
-		nodes: &mut N,
-		set: &[usize],
-		handler: usize,
-	) -> usize {
+	fn restructure_end<N: NodesMut>(&mut self, nodes: &mut N, handler: usize) -> usize {
 		let selection = nodes.add_selection(Var::A);
 
 		// Exit -> Successor
 		// Exit -> Destination -> Repetition -> Selection -> Successor
 		for (index, &exit) in self.point_out.iter().enumerate() {
 			self.vec_usize
-				.extend(nodes.successors(exit).filter(|id| !set.contains(id)));
+				.extend(nodes.successors(exit).filter(|&id| !nodes.contains(id)));
 
 			for successor in self.vec_usize.drain(..) {
 				let repetition = nodes.add_assignment(Var::B, 0, handler);
@@ -98,14 +90,14 @@ impl Repeat {
 		selection
 	}
 
-	pub fn restructure<N: ViewMut>(&mut self, nodes: &mut N, set: &[usize]) -> usize {
+	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N) -> usize {
 		let handler = nodes.add_selection(Var::B);
 
-		self.find_set_bonds(nodes, set);
-		self.restructure_continues(nodes, set, handler);
+		self.find_set_bonds(nodes);
+		self.restructure_continues(nodes, handler);
 
-		let start = self.restructure_start(nodes, set);
-		let end = self.restructure_end(nodes, set, handler);
+		let start = self.restructure_start(nodes);
+		let end = self.restructure_end(nodes, handler);
 
 		nodes.add_link(handler, end);
 		nodes.add_link(handler, start);

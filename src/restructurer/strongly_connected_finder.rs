@@ -1,4 +1,4 @@
-use crate::control_flow::nodes::Nodes;
+use crate::control_flow::Nodes;
 
 enum Record {
 	Unseen,
@@ -119,17 +119,16 @@ impl StronglyConnectedFinder {
 		}
 	}
 
-	pub fn run<N: Nodes>(&mut self, nodes: &N, set: &[usize]) -> &mut Vec<Vec<usize>> {
-		// TODO: What to do about filter sets?
-		let record_count = set.iter().max().map_or(0, |id| id + 1);
+	pub fn run<N: Nodes>(&mut self, nodes: &N) -> &mut Vec<Vec<usize>> {
+		let record_count = nodes.iter().max().map_or(0, |id| id + 1);
 
 		self.initialize_fields(record_count);
 
-		for &id in set {
+		for id in nodes.iter() {
 			self.records[id] = Record::Unseen;
 		}
 
-		for &id in set {
+		for id in nodes.iter() {
 			self.run_at_position(nodes, id);
 		}
 
