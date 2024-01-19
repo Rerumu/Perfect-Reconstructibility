@@ -6,6 +6,8 @@ pub struct Linear {
 	strongly_connected_finder: StronglyConnectedFinder,
 	repeat_restructurer: Repeat,
 	branch_restructurer: Branch,
+
+	vec_usize: Vec<usize>,
 }
 
 impl Linear {
@@ -15,13 +17,15 @@ impl Linear {
 			strongly_connected_finder: StronglyConnectedFinder::new(),
 			repeat_restructurer: Repeat::new(),
 			branch_restructurer: Branch::new(),
+
+			vec_usize: Vec::new(),
 		}
 	}
 
 	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N) {
 		let start = self.repeat_restructurer.restructure(nodes);
 
-		nodes.remove_node(start);
+		nodes.exclude_node(start);
 
 		let strong = self.strongly_connected_finder.run(nodes);
 
@@ -29,9 +33,10 @@ impl Linear {
 			self.restructure(&mut nodes.view_mut(scc));
 		}
 
-		let list: Vec<_> = nodes.successors(start).collect();
+		self.vec_usize.clear();
+		self.vec_usize.extend(nodes.successors(start));
 
-		for &successor in &list {
+		for &successor in &self.vec_usize {
 			self.branch_restructurer.restructure(nodes, successor);
 		}
 	}

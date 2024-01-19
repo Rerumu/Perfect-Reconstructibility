@@ -21,9 +21,9 @@ pub trait NodesMut: Nodes {
 
 	fn add_selection(&mut self, var: Var) -> usize;
 
-	fn remove_node(&mut self, id: usize);
+	fn exclude_node(&mut self, id: usize);
 
-	fn add_link(&mut self, from: usize, to: usize);
+	fn insert_link(&mut self, from: usize, to: usize);
 
 	fn replace_link(&mut self, from: usize, to: usize, new: usize);
 

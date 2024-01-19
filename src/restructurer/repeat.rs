@@ -36,10 +36,12 @@ impl Repeat {
 		// Predecessor -> Entry
 		// Predecessor -> Destination -> Repetition -> Selection -> Entry
 		for (index, &id) in self.point_in.iter().enumerate() {
-			self.vec_usize
-				.extend(nodes.predecessors(id).filter(|&id| nodes.contains(id)));
+			let predecessors = nodes.predecessors(id).filter(|&id| nodes.contains(id));
 
-			for predecessor in self.vec_usize.drain(..) {
+			self.vec_usize.clear();
+			self.vec_usize.extend(predecessors);
+
+			for &predecessor in &self.vec_usize {
 				let repetition = nodes.add_assignment(Var::B, 1, handler);
 				let destination = nodes.add_assignment(Var::A, index, repetition);
 
@@ -56,12 +58,14 @@ impl Repeat {
 		for (index, &entry) in self.point_in.iter().enumerate() {
 			let assignment = nodes.add_assignment(Var::A, index, selection);
 
-			nodes.add_link(selection, entry);
+			nodes.insert_link(selection, entry);
 
-			self.vec_usize
-				.extend(nodes.predecessors(entry).filter(|&id| !nodes.contains(id)));
+			let predecessors = nodes.predecessors(entry).filter(|&id| !nodes.contains(id));
 
-			for predecessor in self.vec_usize.drain(..) {
+			self.vec_usize.clear();
+			self.vec_usize.extend(predecessors);
+
+			for &predecessor in &self.vec_usize {
 				nodes.replace_link(predecessor, entry, assignment);
 			}
 		}
@@ -75,14 +79,16 @@ impl Repeat {
 		// Exit -> Successor
 		// Exit -> Destination -> Repetition -> Selection -> Successor
 		for (index, &exit) in self.point_out.iter().enumerate() {
-			self.vec_usize
-				.extend(nodes.successors(exit).filter(|&id| !nodes.contains(id)));
+			let successors = nodes.successors(exit).filter(|&id| !nodes.contains(id));
 
-			for successor in self.vec_usize.drain(..) {
+			self.vec_usize.clear();
+			self.vec_usize.extend(successors);
+
+			for &successor in &self.vec_usize {
 				let repetition = nodes.add_assignment(Var::B, 0, handler);
 				let destination = nodes.add_assignment(Var::A, index, repetition);
 
-				nodes.add_link(selection, successor);
+				nodes.insert_link(selection, successor);
 				nodes.replace_link(exit, successor, destination);
 			}
 		}
@@ -99,8 +105,8 @@ impl Repeat {
 		let start = self.restructure_start(nodes);
 		let end = self.restructure_end(nodes, handler);
 
-		nodes.add_link(handler, end);
-		nodes.add_link(handler, start);
+		nodes.insert_link(handler, end);
+		nodes.insert_link(handler, start);
 
 		start
 	}

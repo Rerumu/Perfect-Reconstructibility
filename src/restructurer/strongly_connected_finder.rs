@@ -132,7 +132,7 @@ impl StronglyConnectedFinder {
 			self.run_at_position(nodes, id);
 		}
 
-		debug_assert!(self.records.is_empty(), "records is not empty");
+		debug_assert!(self.items.is_empty(), "items is not empty");
 		debug_assert!(self.history.is_empty(), "history is not empty");
 
 		&mut self.results
