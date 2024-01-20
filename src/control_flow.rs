@@ -7,25 +7,25 @@ pub trait Nodes {
 
 	fn contains(&self, id: usize) -> bool;
 
-	fn view<I: IntoIterator<Item = usize>>(&self, set: I) -> impl Nodes + '_;
+	fn add_excluded<I: IntoIterator<Item = usize>>(&mut self, set: I);
+
+	fn set_included<I: IntoIterator<Item = usize>>(&mut self, set: I);
 }
 
 pub enum Var {
-	A,
-	B,
-	C,
+	Destination,
+	Repetition,
+	Branch,
 }
 
 pub trait NodesMut: Nodes {
-	fn add_assignment(&mut self, var: Var, value: usize, successor: usize) -> usize;
+	fn add_no_operation(&mut self) -> usize;
 
 	fn add_selection(&mut self, var: Var) -> usize;
 
-	fn exclude_node(&mut self, id: usize);
+	fn add_variable(&mut self, var: Var, value: usize) -> usize;
 
-	fn insert_link(&mut self, from: usize, to: usize);
+	fn add_link(&mut self, from: usize, to: usize);
 
-	fn replace_link(&mut self, from: usize, to: usize, new: usize);
-
-	fn view_mut<I: IntoIterator<Item = usize>>(&mut self, set: I) -> impl NodesMut + '_;
+	fn remove_link(&mut self, from: usize, to: usize);
 }

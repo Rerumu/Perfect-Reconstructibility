@@ -1,4 +1,4 @@
-use crate::control_flow::NodesMut;
+use crate::control_flow::{Nodes, NodesMut};
 
 use super::{branch::Branch, repeat::Repeat, strongly_connected_finder::StronglyConnectedFinder};
 
@@ -8,6 +8,7 @@ pub struct Linear {
 	branch_restructurer: Branch,
 
 	vec_usize: Vec<usize>,
+	vec_nested: Vec<Vec<usize>>,
 }
 
 impl Linear {
@@ -19,25 +20,41 @@ impl Linear {
 			branch_restructurer: Branch::new(),
 
 			vec_usize: Vec::new(),
+			vec_nested: Vec::new(),
 		}
 	}
 
-	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N) {
-		let start = self.repeat_restructurer.restructure(nodes);
+	fn find_next_component<N: Nodes>(&mut self, nodes: &N) -> Option<Vec<usize>> {
+		let components = self.strongly_connected_finder.run(nodes);
 
-		nodes.exclude_node(start);
+		self.vec_nested.append(components);
+		self.vec_nested.pop()
+	}
 
-		let strong = self.strongly_connected_finder.run(nodes);
+	fn restructure_repeats<N: NodesMut>(&mut self, nodes: &mut N) {
+		while let Some(nested) = self.find_next_component(nodes) {
+			nodes.set_included(nested);
 
-		for scc in std::mem::take(strong) {
-			self.restructure(&mut nodes.view_mut(scc));
+			let start = self.repeat_restructurer.restructure(nodes);
+
+			nodes.add_excluded([start]);
 		}
+	}
 
-		self.vec_usize.clear();
-		self.vec_usize.extend(nodes.successors(start));
-
-		for &successor in &self.vec_usize {
-			self.branch_restructurer.restructure(nodes, successor);
+	fn restructure_branch<N: NodesMut>(&mut self, nodes: &mut N, start: usize) {
+		loop {
+			let branches = self.branch_restructurer.restructure(nodes, start);
 		}
+	}
+
+	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N, start: usize) {
+		debug_assert_eq!(
+			nodes.predecessors(start).count(),
+			0,
+			"start node must not have predecessors"
+		);
+
+		self.restructure_repeats(nodes);
+		self.restructure_branch(nodes, start);
 	}
 }
