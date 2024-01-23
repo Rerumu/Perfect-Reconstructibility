@@ -86,7 +86,7 @@ impl StronglyConnectedFinder {
 
 	#[allow(clippy::match_on_vec_items)]
 	fn handle_from_successor<N: Nodes>(&mut self, nodes: &N, id: usize, successor: usize) {
-		match self.records[successor] {
+		match *self.records.get(successor).unwrap_or(&Record::Seen) {
 			Record::Unseen => self.initialize_item(nodes, successor),
 			Record::Seen => {}
 			Record::Named { lowest } => self.records[id].set_lowest(lowest),

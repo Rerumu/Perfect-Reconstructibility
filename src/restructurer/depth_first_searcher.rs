@@ -23,12 +23,12 @@ impl DepthFirstSearcher {
 		}
 	}
 
-	fn insert_new_item<N, B>(&mut self, nodes: &N, id: usize, mut pre_order: B)
+	fn insert_new_item<N, H>(&mut self, nodes: &N, id: usize, mut handler: H)
 	where
 		N: Nodes,
-		B: FnMut(usize),
+		H: FnMut(usize, bool),
 	{
-		if self.seen[id] {
+		if self.seen.get(id).copied().unwrap_or(true) {
 			return;
 		}
 
@@ -40,31 +40,34 @@ impl DepthFirstSearcher {
 		self.items.push(Item { id, successors });
 		self.seen[id] = true;
 
-		pre_order(id);
+		handler(id, false);
 	}
 
 	pub fn initialize<N: Nodes>(&mut self, nodes: &N) {
 		let last_id = nodes.iter().max().map_or(0, |id| id + 1);
 
 		self.seen.clear();
-		self.seen.resize(last_id, false);
+		self.seen.resize(last_id, true);
+
+		for id in nodes.iter() {
+			self.seen[id] = false;
+		}
 	}
 
-	pub fn run<N, B, A>(&mut self, nodes: &N, start: usize, mut pre_order: B, mut post_order: A)
+	pub fn run<N, H>(&mut self, nodes: &N, start: usize, mut handler: H)
 	where
 		N: Nodes,
-		B: FnMut(usize),
-		A: FnMut(usize),
+		H: FnMut(usize, bool),
 	{
-		self.insert_new_item(nodes, start, &mut pre_order);
+		self.insert_new_item(nodes, start, &mut handler);
 
 		while let Some(mut item) = self.items.pop() {
 			if let Some(successor) = item.successors.pop() {
 				self.items.push(item);
 
-				self.insert_new_item(nodes, successor, &mut pre_order);
+				self.insert_new_item(nodes, successor, &mut handler);
 			} else {
-				post_order(item.id);
+				handler(item.id, true);
 
 				self.vec_successors.push(item.successors);
 			}
