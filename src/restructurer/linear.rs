@@ -7,7 +7,6 @@ pub struct Linear {
 	repeat_restructurer: Repeat,
 	branch_restructurer: Branch,
 
-	vec_usize: Vec<usize>,
 	vec_nested: Vec<Vec<usize>>,
 }
 
@@ -19,7 +18,6 @@ impl Linear {
 			repeat_restructurer: Repeat::new(),
 			branch_restructurer: Branch::new(),
 
-			vec_usize: Vec::new(),
 			vec_nested: Vec::new(),
 		}
 	}
@@ -48,13 +46,7 @@ impl Linear {
 	}
 
 	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N, start: usize) {
-		debug_assert_eq!(
-			nodes.predecessors(start).count(),
-			0,
-			"start node must not have predecessors"
-		);
-
 		self.restructure_repeats(nodes);
-		self.restructure_branch(nodes, start);
+		// self.restructure_branch(nodes, start);
 	}
 }

@@ -1,5 +1,6 @@
 use crate::control_flow::{Nodes, NodesMut, Var};
 
+#[derive(Default)]
 pub struct Repeat {
 	point_in: Vec<usize>,
 	point_out: Vec<usize>,
@@ -141,11 +142,5 @@ impl Repeat {
 		nodes.add_link(latch, start);
 
 		start
-	}
-}
-
-impl Default for Repeat {
-	fn default() -> Self {
-		Self::new()
 	}
 }
