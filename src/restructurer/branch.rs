@@ -1,13 +1,19 @@
 use crate::control_flow::NodesMut;
 
+use super::analysis::dominator_finder::DominatorFinder;
+
 pub struct Branch {
 	branches: Vec<usize>,
+
+	dominator_finder: DominatorFinder,
 }
 
 impl Branch {
 	pub const fn new() -> Self {
 		Self {
 			branches: Vec::new(),
+
+			dominator_finder: DominatorFinder::new(),
 		}
 	}
 
@@ -23,6 +29,7 @@ impl Branch {
 		}
 
 		self.branches.clear();
+		self.dominator_finder.run(nodes, start);
 
 		// TODO: Branches just contain the most dominated paths; it could be trivially
 		// implemented by just counting references in one pass... Except for loops.

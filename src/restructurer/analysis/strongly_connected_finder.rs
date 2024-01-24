@@ -1,4 +1,6 @@
-// https://www.cs.princeton.edu/courses/archive/spr04/cos423/handouts/path%20based...pdf
+// Resources:
+// "Path-based depth-first search for strong and biconnected components",
+//     by Harold N. Gabow
 
 use crate::control_flow::Nodes;
 

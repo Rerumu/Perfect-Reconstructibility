@@ -1,6 +1,12 @@
+// Resources:
+// "Perfect Reconstructability of Control Flow from Demand Dependence Graphs",
+//     by Helge Bahmann, Google Zurich, Nico Reissmann, Magnus Jahre, and Jan Christian Meyer
+
 use crate::control_flow::{Nodes, NodesMut};
 
-use super::{branch::Branch, repeat::Repeat, strongly_connected_finder::StronglyConnectedFinder};
+use super::{
+	analysis::strongly_connected_finder::StronglyConnectedFinder, branch::Branch, repeat::Repeat,
+};
 
 pub struct Linear {
 	strongly_connected_finder: StronglyConnectedFinder,

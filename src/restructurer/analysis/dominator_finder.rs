@@ -1,3 +1,7 @@
+// Resources:
+// "A Simple, Fast Dominance Algorithm",
+//     by Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy
+
 use crate::control_flow::Nodes;
 
 use super::depth_first_searcher::DepthFirstSearcher;
