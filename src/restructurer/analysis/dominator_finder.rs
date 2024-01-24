@@ -73,7 +73,8 @@ impl DominatorFinder {
 			let mut changed = false;
 
 			for &id in &self.post_to_id {
-				let dominator = nodes.predecessors(id).fold(None, |dominator, predecessor| {
+				let predecessors = nodes.predecessors(id).filter(|&id| nodes.contains(id));
+				let dominator = predecessors.fold(None, |dominator, predecessor| {
 					let predecessor = self.id_to_post[predecessor];
 
 					if self.dominators[predecessor] == usize::MAX {
