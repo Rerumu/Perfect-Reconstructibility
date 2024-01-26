@@ -30,6 +30,9 @@ impl Repeat {
 
 		assert!(!self.point_in.is_empty(), "no entry points found");
 
+		self.point_in.sort_unstable();
+		self.point_out.sort_unstable();
+
 		(&self.point_in, &self.point_out)
 	}
 
