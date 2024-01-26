@@ -9,8 +9,6 @@ struct Item {
 pub struct DepthFirstSearcher {
 	items: Vec<Item>,
 	seen: Vec<bool>,
-
-	vec_successors: Vec<Vec<usize>>,
 }
 
 impl DepthFirstSearcher {
@@ -18,8 +16,6 @@ impl DepthFirstSearcher {
 		Self {
 			items: Vec::new(),
 			seen: Vec::new(),
-
-			vec_successors: Vec::new(),
 		}
 	}
 
@@ -32,9 +28,8 @@ impl DepthFirstSearcher {
 			return;
 		}
 
-		let mut successors = self.vec_successors.pop().unwrap_or_default();
+		let mut successors: Vec<_> = nodes.successors(id).collect();
 
-		successors.extend(nodes.successors(id));
 		successors.reverse();
 
 		self.items.push(Item { id, successors });
@@ -68,8 +63,6 @@ impl DepthFirstSearcher {
 				self.insert_new_item(nodes, successor, &mut handler);
 			} else {
 				handler(item.id, true);
-
-				self.vec_successors.push(item.successors);
 			}
 		}
 	}
