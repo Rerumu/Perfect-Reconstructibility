@@ -115,7 +115,7 @@ impl DominatorFinder {
 		}
 	}
 
-	pub fn is_dominator(&self, dominator: usize, id: usize) -> bool {
+	pub fn is_dominator_of(&self, dominator: usize, id: usize) -> bool {
 		let dominator = self.id_to_post[dominator];
 		let id = self.id_to_post[id];
 

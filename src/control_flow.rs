@@ -27,5 +27,5 @@ pub trait NodesMut: Nodes {
 
 	fn add_link(&mut self, from: usize, to: usize);
 
-	fn remove_link(&mut self, from: usize, to: usize);
+	fn replace_link(&mut self, from: usize, to: usize, new: usize);
 }

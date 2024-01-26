@@ -183,14 +183,15 @@ impl<'nodes> NodesMut for SliceMut<'nodes> {
 		self.nodes[to].predecessors.push(from);
 	}
 
-	fn remove_link(&mut self, from: usize, to: usize) {
+	fn replace_link(&mut self, from: usize, to: usize, new: usize) {
 		let successor = self.nodes[from]
 			.successors
 			.iter()
 			.position(|&id| id == to)
 			.unwrap();
 
-		self.nodes[from].successors.remove(successor);
+		self.nodes[from].successors[successor] = new;
+		self.nodes[new].predecessors.push(from);
 
 		let predecessor = self.nodes[to]
 			.predecessors
@@ -368,7 +369,7 @@ fn main() {
 		set: vec![],
 	};
 
-	let node_1 = load_example_repeat(&mut slice);
+	let node_1 = load_example_branch(&mut slice);
 
 	write_nodes(slice.nodes, &mut std::io::stdout()).unwrap();
 
