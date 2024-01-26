@@ -7,6 +7,12 @@ pub enum Element {
 	Empty { tail: usize },
 }
 
+impl Element {
+	const fn invalid() -> Self {
+		Self::Empty { tail: usize::MAX }
+	}
+}
+
 pub struct Branch {
 	branches: Vec<Element>,
 	tails: Vec<usize>,
@@ -48,8 +54,7 @@ impl Branch {
 		let successors = nodes.successors(head).count();
 
 		self.branches.clear();
-		self.branches
-			.resize_with(successors, || Element::Empty { tail: usize::MAX });
+		self.branches.resize_with(successors, Element::invalid);
 
 		self.tails.clear();
 	}
@@ -82,6 +87,15 @@ impl Branch {
 			self.tails.push(id);
 		}
 
+		// Sort all items in the branches, this allows for faster than dominators search
+		for branch in &mut self.branches {
+			if let Element::Full { items, .. } = branch {
+				debug_assert!(!items.is_empty(), "branches should not be empty");
+
+				items.sort_unstable();
+			}
+		}
+
 		// Head is always treated as a tail, so remove it
 		let index = self.tails.iter().position(|&id| id == head).unwrap();
 
@@ -94,12 +108,14 @@ impl Branch {
 
 		// Find all tail connections
 		for &tail in &self.tails {
-			predecessors.extend(nodes.predecessors(tail).filter_map(|predecessor| {
+			let exits = nodes.predecessors(tail).filter_map(|predecessor| {
 				items
 					.binary_search(&predecessor)
-					.ok()
 					.map(|_| (predecessor, tail))
-			}));
+					.ok()
+			});
+
+			predecessors.extend(exits);
 		}
 
 		// If there is more than one tail connection, add a funnel

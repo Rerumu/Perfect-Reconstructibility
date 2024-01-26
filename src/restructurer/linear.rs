@@ -2,10 +2,12 @@
 // "Perfect Reconstructability of Control Flow from Demand Dependence Graphs",
 //     by Helge Bahmann, Google Zurich, Nico Reissmann, Magnus Jahre, and Jan Christian Meyer
 
-use crate::control_flow::{Nodes, NodesMut};
+use crate::control_flow::NodesMut;
 
 use super::{
-	analysis::strongly_connected_finder::StronglyConnectedFinder, branch::Branch, repeat::Repeat,
+	analysis::strongly_connected_finder::StronglyConnectedFinder,
+	branch::{Branch, Element},
+	repeat::Repeat,
 };
 
 pub struct Linear {
@@ -13,6 +15,7 @@ pub struct Linear {
 	repeat_restructurer: Repeat,
 	branch_restructurer: Branch,
 
+	vec_branches: Vec<(Vec<usize>, usize)>,
 	vec_components: Vec<Vec<usize>>,
 }
 
@@ -24,24 +27,26 @@ impl Linear {
 			repeat_restructurer: Repeat::new(),
 			branch_restructurer: Branch::new(),
 
+			vec_branches: Vec::new(),
 			vec_components: Vec::new(),
 		}
 	}
 
-	fn find_next_component<N: Nodes>(&mut self, nodes: &N) -> Option<Vec<usize>> {
-		let components = self.strongly_connected_finder.run(nodes);
-
-		self.vec_components.append(components);
-		self.vec_components.pop()
-	}
-
 	fn restructure_repeats<N: NodesMut>(&mut self, nodes: &mut N) {
-		while let Some(nested) = self.find_next_component(nodes) {
-			nodes.set_included(nested);
+		loop {
+			let components = self.strongly_connected_finder.run(nodes);
 
-			let start = self.repeat_restructurer.restructure(nodes);
+			self.vec_components.append(components);
 
-			nodes.add_excluded([start]);
+			if let Some(nested) = self.vec_components.pop() {
+				nodes.set_included(nested);
+
+				let start = self.repeat_restructurer.restructure(nodes);
+
+				nodes.add_excluded([start]);
+			} else {
+				break;
+			}
 		}
 	}
 
