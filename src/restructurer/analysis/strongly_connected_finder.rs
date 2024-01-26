@@ -13,7 +13,6 @@ pub struct StronglyConnectedFinder {
 	stack: Vec<usize>,
 
 	results: Vec<Vec<usize>>,
-	vec_unused: Vec<Vec<usize>>,
 	depth_first_searcher: DepthFirstSearcher,
 }
 
@@ -25,7 +24,6 @@ impl StronglyConnectedFinder {
 			stack: Vec::new(),
 
 			results: Vec::new(),
-			vec_unused: Vec::new(),
 			depth_first_searcher: DepthFirstSearcher::new(),
 		}
 	}
@@ -36,7 +34,7 @@ impl StronglyConnectedFinder {
 		self.names.clear();
 		self.names.resize(last_id, usize::MAX);
 
-		self.vec_unused.append(&mut self.results);
+		self.results.clear();
 	}
 
 	fn on_pre_order<N: Nodes>(&mut self, nodes: &N, id: usize) {
@@ -65,19 +63,14 @@ impl StronglyConnectedFinder {
 			return;
 		}
 
-		let mut result = self.vec_unused.pop().unwrap_or_default();
-
-		result.clear();
-		result.extend(self.path.drain(index..));
-
-		for &id in &result {
+		for &id in &self.path[index..] {
 			self.names[id] = usize::MAX;
 		}
 
+		let result = self.path.drain(index..);
+
 		if result.len() > 1 {
-			self.results.push(result);
-		} else {
-			self.vec_unused.push(result);
+			self.results.push(result.collect());
 		}
 	}
 

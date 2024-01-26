@@ -13,7 +13,7 @@ pub struct Linear {
 	repeat_restructurer: Repeat,
 	branch_restructurer: Branch,
 
-	vec_nested: Vec<Vec<usize>>,
+	vec_components: Vec<Vec<usize>>,
 }
 
 impl Linear {
@@ -24,15 +24,15 @@ impl Linear {
 			repeat_restructurer: Repeat::new(),
 			branch_restructurer: Branch::new(),
 
-			vec_nested: Vec::new(),
+			vec_components: Vec::new(),
 		}
 	}
 
 	fn find_next_component<N: Nodes>(&mut self, nodes: &N) -> Option<Vec<usize>> {
 		let components = self.strongly_connected_finder.run(nodes);
 
-		self.vec_nested.append(components);
-		self.vec_nested.pop()
+		self.vec_components.append(components);
+		self.vec_components.pop()
 	}
 
 	fn restructure_repeats<N: NodesMut>(&mut self, nodes: &mut N) {
@@ -46,13 +46,11 @@ impl Linear {
 	}
 
 	fn restructure_branch<N: NodesMut>(&mut self, nodes: &mut N, start: usize) {
-		loop {
-			let branches = self.branch_restructurer.restructure(nodes, start);
-		}
+		let branches = self.branch_restructurer.restructure(nodes, start);
 	}
 
 	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N, start: usize) {
 		self.restructure_repeats(nodes);
-		// self.restructure_branch(nodes, start);
+		self.restructure_branch(nodes, start);
 	}
 }

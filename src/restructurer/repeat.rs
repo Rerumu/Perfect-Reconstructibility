@@ -4,8 +4,6 @@ use crate::control_flow::{Nodes, NodesMut, Var};
 pub struct Repeat {
 	point_in: Vec<usize>,
 	point_out: Vec<usize>,
-
-	vec_usize: Vec<usize>,
 }
 
 impl Repeat {
@@ -13,8 +11,6 @@ impl Repeat {
 		Self {
 			point_in: Vec::new(),
 			point_out: Vec::new(),
-
-			vec_usize: Vec::new(),
 		}
 	}
 
@@ -57,17 +53,16 @@ impl Repeat {
 		// Predecessor -> Entry
 		// Predecessor -> Destination -> Repetition -> Latch -> Selection -> Entry
 		for (index, &entry) in self.point_in.iter().enumerate() {
-			let predecessors = nodes.predecessors(entry).filter(|&id| nodes.contains(id));
+			let predecessors: Vec<_> = nodes
+				.predecessors(entry)
+				.filter(|&id| nodes.contains(id))
+				.collect();
 
-			self.vec_usize.clear();
-			self.vec_usize.extend(predecessors);
-
-			for &predecessor in &self.vec_usize {
+			for predecessor in predecessors {
 				let destination = nodes.add_variable(Var::Destination, index);
 				let repetition = nodes.add_variable(Var::Repetition, 1);
 
-				nodes.remove_link(predecessor, entry);
-				nodes.add_link(predecessor, destination);
+				nodes.replace_link(predecessor, entry, destination);
 				nodes.add_link(destination, repetition);
 				nodes.add_link(repetition, latch);
 			}
@@ -80,16 +75,15 @@ impl Repeat {
 		// Predecessor -> Entry
 		// Predecessor -> Destination -> Selection -> Entry
 		for (index, &entry) in self.point_in.iter().enumerate() {
-			let predecessors = nodes.predecessors(entry).filter(|&id| !nodes.contains(id));
+			let predecessors: Vec<_> = nodes
+				.predecessors(entry)
+				.filter(|&id| !nodes.contains(id))
+				.collect();
 
-			self.vec_usize.clear();
-			self.vec_usize.extend(predecessors);
-
-			for &predecessor in &self.vec_usize {
+			for predecessor in predecessors {
 				let destination = nodes.add_variable(Var::Destination, index);
 
-				nodes.remove_link(predecessor, entry);
-				nodes.add_link(predecessor, destination);
+				nodes.replace_link(predecessor, entry, destination);
 				nodes.add_link(destination, selection);
 			}
 
@@ -105,19 +99,18 @@ impl Repeat {
 		// Exit -> Successor
 		// Exit -> Destination -> Repetition -> Latch -> Selection -> Successor
 		for (index, &exit) in self.point_out.iter().enumerate() {
-			let successors = nodes.successors(exit).filter(|&id| !nodes.contains(id));
+			let successors: Vec<_> = nodes
+				.successors(exit)
+				.filter(|&id| !nodes.contains(id))
+				.collect();
 
-			self.vec_usize.clear();
-			self.vec_usize.extend(successors);
-
-			for &successor in &self.vec_usize {
+			for successor in successors {
 				let destination = nodes.add_variable(Var::Destination, index);
 				let repetition = nodes.add_variable(Var::Repetition, 0);
 
-				nodes.remove_link(exit, successor);
+				nodes.replace_link(exit, successor, destination);
 				nodes.add_link(selection, successor);
 
-				nodes.add_link(exit, destination);
 				nodes.add_link(destination, repetition);
 				nodes.add_link(repetition, latch);
 			}
