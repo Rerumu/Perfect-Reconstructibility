@@ -27,8 +27,8 @@ impl DominatorFinder {
 	}
 
 	fn initialize_fields<N: Nodes>(&mut self, nodes: &N, set: Slice, start: usize) {
-		let len = set.iter_ones().count();
-		let last = set.iter_ones().max().map_or(0, |id| id + 1);
+		let len = set.ones().count();
+		let last = set.ones().max().map_or(0, |id| id + 1);
 
 		self.dominators.clear();
 		self.dominators.resize(len, usize::MAX);

@@ -50,12 +50,12 @@ impl Set {
 		self.as_slice().iter()
 	}
 
-	pub fn iter_ones(&self) -> impl Iterator<Item = usize> + '_ {
-		self.as_slice().iter_ones()
+	pub fn ones(&self) -> impl Iterator<Item = usize> + '_ {
+		self.as_slice().ones()
 	}
 
-	pub fn iter_zeros(&self) -> impl Iterator<Item = usize> + '_ {
-		self.as_slice().iter_zeros()
+	pub fn zeros(&self) -> impl Iterator<Item = usize> + '_ {
+		self.as_slice().zeros()
 	}
 }
 
@@ -74,13 +74,13 @@ impl<'a> Slice<'a> {
 		self.elements.iter().copied()
 	}
 
-	pub fn iter_ones(self) -> impl Iterator<Item = usize> + 'a {
+	pub fn ones(self) -> impl Iterator<Item = usize> + 'a {
 		self.iter()
 			.enumerate()
 			.filter_map(|(index, element)| element.then_some(index))
 	}
 
-	pub fn iter_zeros(self) -> impl Iterator<Item = usize> + 'a {
+	pub fn zeros(self) -> impl Iterator<Item = usize> + 'a {
 		self.iter()
 			.enumerate()
 			.filter_map(|(index, element)| (!element).then_some(index))

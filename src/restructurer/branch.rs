@@ -67,7 +67,7 @@ impl Branch {
 		}
 
 		// Find all nodes dominated by the branch start
-		'dominated: for id in set.iter_ones() {
+		'dominated: for id in set.ones() {
 			for branch in &mut self.branches {
 				if let Element::Full { items, start } = branch {
 					if self.dominator_finder.is_dominator_of(*start, id) {

@@ -29,7 +29,7 @@ impl StronglyConnectedFinder {
 	}
 
 	fn initialize_fields(&mut self, set: Slice) {
-		let last = set.iter_ones().max().map_or(0, |index| index + 1);
+		let last = set.ones().max().map_or(0, |index| index + 1);
 
 		self.names.clear();
 		self.names.resize(last, usize::MAX);
@@ -81,7 +81,7 @@ impl StronglyConnectedFinder {
 
 		self.initialize_fields(set);
 
-		for id in set.iter_ones() {
+		for id in set.ones() {
 			depth_first_searcher.run(nodes, id, |id, post| {
 				if post {
 					self.on_post_order(id);

@@ -42,7 +42,7 @@ impl DepthFirstSearcher {
 
 	pub fn initialize(&mut self, set: Slice) {
 		self.seen.clear();
-		self.seen.extend(set.iter_zeros());
+		self.seen.extend(set.zeros());
 	}
 
 	pub fn run<N, H>(&mut self, nodes: &N, start: usize, mut handler: H)

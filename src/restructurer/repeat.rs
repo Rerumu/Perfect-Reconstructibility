@@ -21,7 +21,7 @@ impl Repeat {
 		self.point_in.clear();
 		self.point_out.clear();
 
-		for id in set.iter_ones() {
+		for id in set.ones() {
 			if nodes.predecessors(id).any(|id| !set.get(id)) {
 				self.point_in.push(id);
 			}
