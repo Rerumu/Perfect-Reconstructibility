@@ -70,20 +70,10 @@ impl DominatorFinder {
 		id_1
 	}
 
-	fn is_initialized(&self, id: usize) -> bool {
+	fn is_initialized(&self, index: usize) -> bool {
 		self.dominators
-			.get(self.id_to_post[id])
+			.get(index)
 			.map_or(false, |&id| id != usize::MAX)
-	}
-
-	fn find_next_dominator(&self, dominator: usize, predecessor: usize) -> usize {
-		let predecessor = self.id_to_post[predecessor];
-
-		if dominator == usize::MAX {
-			predecessor
-		} else {
-			self.find_intersection(predecessor, dominator)
-		}
 	}
 
 	fn run_iterations<N: Nodes>(&mut self, nodes: &N) {
@@ -93,12 +83,10 @@ impl DominatorFinder {
 			for &id in &self.post_to_id[1..] {
 				let dominator = nodes
 					.predecessors(id)
+					.map(|predecessor| self.id_to_post[predecessor])
 					.filter(|&predecessor| self.is_initialized(predecessor))
-					.fold(usize::MAX, |dominator, predecessor| {
-						self.find_next_dominator(dominator, predecessor)
-					});
-
-				debug_assert_ne!(dominator, usize::MAX, "node {id} has no dominator");
+					.reduce(|dominator, predecessor| self.find_intersection(dominator, predecessor))
+					.expect("node should have a dominator");
 
 				let index = self.id_to_post[id];
 
