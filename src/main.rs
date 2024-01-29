@@ -1,6 +1,7 @@
 use std::{iter::Copied, slice::Iter};
 
 use perfect_reconstructibility::{
+	collection::set::Set,
 	control_flow::{Nodes, NodesMut, Var},
 	restructurer::linear::Linear,
 };
@@ -57,7 +58,6 @@ struct Node {
 
 struct Slice<'nodes> {
 	nodes: &'nodes [Node],
-	set: Vec<usize>,
 }
 
 impl<'nodes> Nodes for Slice<'nodes> {
@@ -68,33 +68,10 @@ impl<'nodes> Nodes for Slice<'nodes> {
 	fn successors(&self, id: usize) -> Copied<Iter<'_, usize>> {
 		self.nodes[id].successors.iter().copied()
 	}
-
-	fn iter(&self) -> Copied<Iter<'_, usize>> {
-		self.set.iter().copied()
-	}
-
-	fn contains(&self, id: usize) -> bool {
-		self.set.binary_search(&id).is_ok()
-	}
-
-	fn add_excluded<I: IntoIterator<Item = usize>>(&mut self, set: I) {
-		for id in set {
-			let index = self.set.binary_search(&id).unwrap();
-
-			self.set.remove(index);
-		}
-	}
-
-	fn set_included<I: IntoIterator<Item = usize>>(&mut self, set: I) {
-		self.set.clear();
-		self.set.extend(set);
-		self.set.sort_unstable();
-	}
 }
 
 struct SliceMut<'nodes> {
 	nodes: &'nodes mut Vec<Node>,
-	set: Vec<usize>,
 }
 
 impl SliceMut<'_> {
@@ -111,10 +88,7 @@ impl SliceMut<'_> {
 			self.nodes[predecessor].successors.push(id);
 		}
 
-		let index = self.set.binary_search(&id).unwrap_err();
-
 		self.nodes.push(node);
-		self.set.insert(index, id);
 
 		id
 	}
@@ -127,28 +101,6 @@ impl<'nodes> Nodes for SliceMut<'nodes> {
 
 	fn successors(&self, id: usize) -> Copied<Iter<'_, usize>> {
 		self.nodes[id].successors.iter().copied()
-	}
-
-	fn iter(&self) -> Copied<Iter<'_, usize>> {
-		self.set.iter().copied()
-	}
-
-	fn contains(&self, id: usize) -> bool {
-		self.set.binary_search(&id).is_ok()
-	}
-
-	fn add_excluded<I: IntoIterator<Item = usize>>(&mut self, set: I) {
-		for id in set {
-			let index = self.set.binary_search(&id).unwrap();
-
-			self.set.remove(index);
-		}
-	}
-
-	fn set_included<I: IntoIterator<Item = usize>>(&mut self, set: I) {
-		self.set.clear();
-		self.set.extend(set);
-		self.set.sort_unstable();
 	}
 }
 
@@ -364,16 +316,14 @@ fn load_example_branch(slice: &mut SliceMut<'_>) -> usize {
 
 fn main() {
 	let mut nodes = vec![];
-	let mut slice = SliceMut {
-		nodes: &mut nodes,
-		set: vec![],
-	};
+	let mut slice = SliceMut { nodes: &mut nodes };
 
 	let node_1 = load_example_branch(&mut slice);
+	let mut set: Set = (0..slice.nodes.len()).collect();
 
 	write_nodes(slice.nodes, &mut std::io::stdout()).unwrap();
 
-	Linear::new().restructure(&mut slice, node_1);
+	Linear::new().restructure(&mut slice, &mut set, node_1);
 
 	write_nodes(slice.nodes, &mut std::io::stdout()).unwrap();
 }

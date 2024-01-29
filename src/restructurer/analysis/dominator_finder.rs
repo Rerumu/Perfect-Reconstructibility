@@ -2,7 +2,7 @@
 // "A Simple, Fast Dominance Algorithm",
 //     by Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy
 
-use crate::control_flow::Nodes;
+use crate::{collection::set::Slice, control_flow::Nodes};
 
 use super::depth_first_searcher::DepthFirstSearcher;
 
@@ -26,9 +26,9 @@ impl DominatorFinder {
 		}
 	}
 
-	fn initialize_fields<N: Nodes>(&mut self, nodes: &N, start: usize) {
-		let len = nodes.iter().count();
-		let last_id = nodes.iter().max().map_or(0, |id| id + 1);
+	fn initialize_fields<N: Nodes>(&mut self, nodes: &N, set: Slice, start: usize) {
+		let len = set.iter_ones().count();
+		let last = set.iter_ones().max().map_or(0, |id| id + 1);
 
 		self.dominators.clear();
 		self.dominators.resize(len, usize::MAX);
@@ -39,9 +39,9 @@ impl DominatorFinder {
 
 		self.post_to_id.clear();
 		self.id_to_post.clear();
-		self.id_to_post.resize(last_id, usize::MAX);
+		self.id_to_post.resize(last, usize::MAX);
 
-		self.depth_first_searcher.initialize(nodes);
+		self.depth_first_searcher.initialize(set);
 		self.depth_first_searcher.run(nodes, start, |id, post| {
 			if !post {
 				return;
@@ -110,8 +110,8 @@ impl DominatorFinder {
 		self.find_intersection(dominator, id) == dominator
 	}
 
-	pub fn run<N: Nodes>(&mut self, nodes: &N, start: usize) {
-		self.initialize_fields(nodes, start);
+	pub fn run<N: Nodes>(&mut self, nodes: &N, set: Slice, start: usize) {
+		self.initialize_fields(nodes, set, start);
 		self.run_iterations(nodes);
 	}
 }

@@ -1,16 +1,13 @@
-use crate::control_flow::{Nodes, NodesMut, Var};
+use crate::{
+	collection::set::{Set, Slice},
+	control_flow::{Nodes, NodesMut, Var},
+};
 
 use super::analysis::dominator_finder::DominatorFinder;
 
 pub enum Element {
 	Full { items: Vec<usize>, start: usize },
 	Empty { tail: usize },
-}
-
-impl Element {
-	const fn invalid() -> Self {
-		Self::Empty { tail: usize::MAX }
-	}
 }
 
 pub struct Branch {
@@ -30,14 +27,12 @@ impl Branch {
 		}
 	}
 
-	fn find_branch_head<N: Nodes>(&mut self, nodes: &mut N, mut start: usize) -> usize {
-		let mut temp = Vec::new();
-
+	fn find_branch_head<N: Nodes>(nodes: &N, set: &mut Set, mut start: usize) -> usize {
 		loop {
 			let mut successors = nodes.successors(start);
 
 			if let (Some(next), None) = (successors.next(), successors.next()) {
-				temp.push(start);
+				set.remove(start);
 
 				start = next;
 			} else {
@@ -45,21 +40,20 @@ impl Branch {
 			}
 		}
 
-		nodes.add_excluded(temp);
-
 		start
 	}
 
 	fn initialize_fields<N: Nodes>(&mut self, nodes: &N, head: usize) {
 		let successors = nodes.successors(head).count();
+		let construct = || Element::Empty { tail: usize::MAX };
 
 		self.branches.clear();
-		self.branches.resize_with(successors, Element::invalid);
+		self.branches.resize_with(successors, construct);
 
 		self.tails.clear();
 	}
 
-	fn find_branch_elements<N: Nodes>(&mut self, nodes: &N, head: usize) {
+	fn find_branch_elements<N: Nodes>(&mut self, nodes: &N, set: Slice, head: usize) {
 		// Elements with only head as predecessor are full, otherwise empty
 		for (branch, start) in self.branches.iter_mut().zip(nodes.successors(head)) {
 			if nodes.predecessors(start).all(|id| id == head) {
@@ -73,7 +67,7 @@ impl Branch {
 		}
 
 		// Find all nodes dominated by the branch start
-		'dominated: for id in nodes.iter() {
+		'dominated: for id in set.iter_ones() {
 			for branch in &mut self.branches {
 				if let Element::Full { items, start } = branch {
 					if self.dominator_finder.is_dominator_of(*start, id) {
@@ -96,10 +90,6 @@ impl Branch {
 			}
 		}
 
-		// Head is always treated as a tail, so remove it
-		let index = self.tails.iter().position(|&id| id == head).unwrap();
-
-		self.tails.swap_remove(index);
 		self.tails.sort_unstable();
 	}
 
@@ -172,13 +162,20 @@ impl Branch {
 		self.branches = branches;
 	}
 
-	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N, start: usize) -> &mut Vec<Element> {
-		let head = self.find_branch_head(nodes, start);
+	pub fn restructure<N: NodesMut>(
+		&mut self,
+		nodes: &mut N,
+		set: &mut Set,
+		start: usize,
+	) -> &mut Vec<Element> {
+		let head = Self::find_branch_head(nodes, set, start);
 
-		self.dominator_finder.run(nodes, head);
+		self.dominator_finder.run(nodes, set.as_slice(), head);
+
+		set.remove(head);
 
 		self.initialize_fields(nodes, head);
-		self.find_branch_elements(nodes, head);
+		self.find_branch_elements(nodes, set.as_slice(), head);
 
 		if self.tails.len() != 1 {
 			self.restructure_branches(nodes, head);

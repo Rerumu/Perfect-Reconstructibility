@@ -1,4 +1,7 @@
-use crate::control_flow::Nodes;
+use crate::{
+	collection::set::{Set, Slice},
+	control_flow::Nodes,
+};
 
 struct Item {
 	id: usize,
@@ -8,14 +11,14 @@ struct Item {
 #[derive(Default)]
 pub struct DepthFirstSearcher {
 	items: Vec<Item>,
-	seen: Vec<bool>,
+	seen: Set,
 }
 
 impl DepthFirstSearcher {
 	pub const fn new() -> Self {
 		Self {
 			items: Vec::new(),
-			seen: Vec::new(),
+			seen: Set::new(),
 		}
 	}
 
@@ -24,7 +27,7 @@ impl DepthFirstSearcher {
 		N: Nodes,
 		H: FnMut(usize, bool),
 	{
-		if self.seen.get(id).copied().unwrap_or(true) {
+		if self.seen.insert(id) {
 			return;
 		}
 
@@ -33,20 +36,13 @@ impl DepthFirstSearcher {
 		successors.reverse();
 
 		self.items.push(Item { id, successors });
-		self.seen[id] = true;
 
 		handler(id, false);
 	}
 
-	pub fn initialize<N: Nodes>(&mut self, nodes: &N) {
-		let last_id = nodes.iter().max().map_or(0, |id| id + 1);
-
+	pub fn initialize(&mut self, set: Slice) {
 		self.seen.clear();
-		self.seen.resize(last_id, true);
-
-		for id in nodes.iter() {
-			self.seen[id] = false;
-		}
+		self.seen.extend(set.iter_zeros());
 	}
 
 	pub fn run<N, H>(&mut self, nodes: &N, start: usize, mut handler: H)

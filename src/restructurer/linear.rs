@@ -2,7 +2,7 @@
 // "Perfect Reconstructability of Control Flow from Demand Dependence Graphs",
 //     by Helge Bahmann, Google Zurich, Nico Reissmann, Magnus Jahre, and Jan Christian Meyer
 
-use crate::control_flow::NodesMut;
+use crate::{collection::set::Set, control_flow::NodesMut};
 
 use super::{
 	analysis::strongly_connected_finder::StronglyConnectedFinder,
@@ -32,30 +32,51 @@ impl Linear {
 		}
 	}
 
-	fn restructure_repeats<N: NodesMut>(&mut self, nodes: &mut N) {
+	fn restructure_repeats<N: NodesMut>(&mut self, nodes: &mut N, set: &mut Set) {
 		loop {
-			let components = self.strongly_connected_finder.run(nodes);
+			let components = self.strongly_connected_finder.run(nodes, set.as_slice());
 
 			self.vec_components.append(components);
 
 			if let Some(nested) = self.vec_components.pop() {
-				nodes.set_included(nested);
+				set.clear();
+				set.extend(nested);
 
-				let start = self.repeat_restructurer.restructure(nodes);
+				let start = self.repeat_restructurer.restructure(nodes, set.as_slice());
 
-				nodes.add_excluded([start]);
+				set.remove(start);
 			} else {
 				break;
 			}
 		}
 	}
 
-	fn restructure_branch<N: NodesMut>(&mut self, nodes: &mut N, start: usize) {
-		let branches = self.branch_restructurer.restructure(nodes, start);
+	fn restructure_branch<N: NodesMut>(&mut self, nodes: &mut N, set: &mut Set, mut start: usize) {
+		loop {
+			let branches = self.branch_restructurer.restructure(nodes, set, start);
+			let iter = branches.drain(..).filter_map(|element| {
+				if let Element::Full { items, start } = element {
+					Some((items, start))
+				} else {
+					None
+				}
+			});
+
+			self.vec_branches.extend(iter);
+
+			if let Some((elements, next)) = self.vec_branches.pop() {
+				set.clear();
+				set.extend(elements);
+
+				start = next;
+			} else {
+				break;
+			}
+		}
 	}
 
-	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N, start: usize) {
-		self.restructure_repeats(nodes);
-		self.restructure_branch(nodes, start);
+	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N, set: &mut Set, start: usize) {
+		self.restructure_repeats(nodes, set);
+		self.restructure_branch(nodes, set, start);
 	}
 }

@@ -2,7 +2,7 @@
 // "Path-based depth-first search for strong and biconnected components",
 //     by Harold N. Gabow
 
-use crate::control_flow::Nodes;
+use crate::{collection::set::Slice, control_flow::Nodes};
 
 use super::depth_first_searcher::DepthFirstSearcher;
 
@@ -28,11 +28,11 @@ impl StronglyConnectedFinder {
 		}
 	}
 
-	fn initialize_fields<N: Nodes>(&mut self, nodes: &N) {
-		let last_id = nodes.iter().max().map_or(0, |id| id + 1);
+	fn initialize_fields(&mut self, set: Slice) {
+		let last = set.iter_ones().max().map_or(0, |index| index + 1);
 
 		self.names.clear();
-		self.names.resize(last_id, usize::MAX);
+		self.names.resize(last, usize::MAX);
 
 		self.results.clear();
 	}
@@ -74,14 +74,14 @@ impl StronglyConnectedFinder {
 		}
 	}
 
-	pub fn run<N: Nodes>(&mut self, nodes: &N) -> &mut Vec<Vec<usize>> {
+	pub fn run<N: Nodes>(&mut self, nodes: &N, set: Slice) -> &mut Vec<Vec<usize>> {
 		let mut depth_first_searcher = std::mem::take(&mut self.depth_first_searcher);
 
-		depth_first_searcher.initialize(nodes);
+		depth_first_searcher.initialize(set);
 
-		self.initialize_fields(nodes);
+		self.initialize_fields(set);
 
-		for id in nodes.iter() {
+		for id in set.iter_ones() {
 			depth_first_searcher.run(nodes, id, |id, post| {
 				if post {
 					self.on_post_order(id);
