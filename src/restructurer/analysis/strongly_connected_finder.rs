@@ -35,6 +35,7 @@ impl StronglyConnectedFinder {
 		self.names.resize(last, usize::MAX);
 
 		self.results.clear();
+		self.depth_first_searcher.initialize(set);
 	}
 
 	fn on_pre_order<N: Nodes>(&mut self, nodes: &N, id: usize) {
@@ -75,11 +76,9 @@ impl StronglyConnectedFinder {
 	}
 
 	pub fn run<N: Nodes>(&mut self, nodes: &N, set: Slice) -> &mut Vec<Vec<usize>> {
-		let mut depth_first_searcher = std::mem::take(&mut self.depth_first_searcher);
-
-		depth_first_searcher.initialize(set);
-
 		self.initialize_fields(set);
+
+		let mut depth_first_searcher = std::mem::take(&mut self.depth_first_searcher);
 
 		for id in set.ones() {
 			depth_first_searcher.run(nodes, id, |id, post| {
