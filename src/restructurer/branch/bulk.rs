@@ -63,19 +63,11 @@ impl Bulk {
 		self.branches.extend(iter);
 	}
 
-	pub fn restructure<N: NodesMut, P: FnMut(&N)>(
-		&mut self,
-		nodes: &mut N,
-		set: &mut Set,
-		mut start: usize,
-		mut print: P,
-	) {
+	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N, set: &mut Set, mut start: usize) {
 		self.set.clone_from(set);
 
 		loop {
 			if let Some(head) = self.find_branch_head(nodes, start) {
-				print(nodes);
-
 				self.restructure_branch(nodes, head);
 
 				set.extend(self.single.insertions().iter().copied());
