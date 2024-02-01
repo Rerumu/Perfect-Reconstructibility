@@ -81,7 +81,10 @@ impl Single {
 		self.tail.remove(head);
 
 		for tail in self.tail.ones() {
-			if nodes.predecessors(tail).any(|id| !self.tail.get(id)) {
+			if nodes
+				.predecessors(tail)
+				.any(|id| !self.tail.get(id) && set.get(id))
+			{
 				self.continuations.push(tail);
 			}
 		}
