@@ -29,12 +29,12 @@ impl Bulk {
 
 	fn find_branch_head<N: Nodes>(&mut self, nodes: &N, mut start: usize) -> Option<usize> {
 		loop {
-			let mut successors = nodes.successors(start);
-			let successor = successors.next()?;
-
-			if !self.set.get(successor) {
+			if nodes.successors(start).any(|id| !self.set.get(id)) {
 				return None;
 			}
+
+			let mut successors = nodes.successors(start);
+			let successor = successors.next()?;
 
 			if successors.next().is_some() {
 				return Some(start);
@@ -63,11 +63,19 @@ impl Bulk {
 		self.branches.extend(iter);
 	}
 
-	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N, set: &mut Set, mut start: usize) {
+	pub fn restructure<N: NodesMut, P: FnMut(&N)>(
+		&mut self,
+		nodes: &mut N,
+		set: &mut Set,
+		mut start: usize,
+		mut print: P,
+	) {
 		self.set.clone_from(set);
 
 		loop {
 			if let Some(head) = self.find_branch_head(nodes, start) {
+				print(nodes);
+
 				self.restructure_branch(nodes, head);
 
 				set.extend(self.single.insertions().iter().copied());
