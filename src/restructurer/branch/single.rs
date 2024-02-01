@@ -85,8 +85,6 @@ impl Single {
 				self.continuations.push(tail);
 			}
 		}
-
-		self.continuations.sort_unstable();
 	}
 
 	fn restructure_full<N: NodesMut>(&mut self, nodes: &mut N, items: &mut Set, exit: usize) {
@@ -187,8 +185,17 @@ impl Single {
 		self.find_branch_elements(nodes, set, head);
 
 		if let &[exit] = self.continuations.as_slice() {
+			println!("BAILT: {head} -> {exit}");
+
 			exit
 		} else {
+			println!("TRY: {head}");
+
+			if self.continuations.is_empty() {
+				println!("{:?}", set);
+				println!("{:?}", self.tail);
+			}
+
 			self.restructure_branches(nodes, head)
 		}
 	}
