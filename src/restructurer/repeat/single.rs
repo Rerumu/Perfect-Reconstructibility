@@ -4,16 +4,21 @@ use crate::{
 };
 
 #[derive(Default)]
-pub struct Repeat {
+pub struct Single {
 	point_in: Vec<usize>,
 	point_out: Vec<usize>,
+
+	insertions: Vec<usize>,
 }
 
-impl Repeat {
+impl Single {
+	#[must_use]
 	pub const fn new() -> Self {
 		Self {
 			point_in: Vec::new(),
 			point_out: Vec::new(),
+
+			insertions: Vec::new(),
 		}
 	}
 
@@ -68,12 +73,17 @@ impl Repeat {
 				nodes.replace_link(predecessor, entry, destination);
 				nodes.add_link(destination, repetition);
 				nodes.add_link(repetition, latch);
+
+				self.insertions.push(destination);
+				self.insertions.push(repetition);
 			}
 		}
 	}
 
 	fn restructure_start<N: NodesMut>(&mut self, nodes: &mut N, set: Slice) -> usize {
 		let selection = nodes.add_selection(Var::Destination);
+
+		self.insertions.push(selection);
 
 		// Predecessor -> Entry
 		// Predecessor -> Destination -> Selection -> Entry
@@ -88,6 +98,8 @@ impl Repeat {
 
 				nodes.replace_link(predecessor, entry, destination);
 				nodes.add_link(destination, selection);
+
+				self.insertions.push(destination);
 			}
 
 			nodes.add_link(selection, entry);
@@ -98,6 +110,8 @@ impl Repeat {
 
 	fn restructure_end<N: NodesMut>(&mut self, nodes: &mut N, set: Slice, latch: usize) -> usize {
 		let selection = nodes.add_selection(Var::Destination);
+
+		self.insertions.push(selection);
 
 		// Exit -> Successor
 		// Exit -> Destination -> Repetition -> Latch -> Selection -> Successor
@@ -113,18 +127,31 @@ impl Repeat {
 
 				nodes.add_link(destination, repetition);
 				nodes.add_link(repetition, latch);
+
+				self.insertions.push(destination);
+				self.insertions.push(repetition);
 			}
 		}
 
 		selection
 	}
 
+	#[must_use]
+	pub fn insertions(&self) -> &[usize] {
+		&self.insertions
+	}
+
 	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N, set: Slice) -> usize {
 		if let Some(start) = self.find_start_if_structured(nodes, set) {
+			self.insertions.clear();
+
 			return start;
 		}
 
 		let latch = nodes.add_selection(Var::Repetition);
+
+		self.insertions.clear();
+		self.insertions.push(latch);
 
 		self.restructure_continues(nodes, set, latch);
 

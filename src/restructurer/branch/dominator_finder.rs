@@ -2,13 +2,14 @@
 // "A Simple, Fast Dominance Algorithm",
 //     by Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy
 
-use crate::{collection::set::Slice, control_flow::Nodes};
+use crate::{
+	collection::set::Slice, control_flow::Nodes,
+	restructurer::depth_first_searcher::DepthFirstSearcher,
+};
 
-use super::depth_first_searcher::DepthFirstSearcher;
-
+#[derive(Default)]
 pub struct DominatorFinder {
 	dominators: Vec<usize>,
-
 	post_to_id: Vec<usize>,
 	id_to_post: Vec<usize>,
 
@@ -29,6 +30,8 @@ impl DominatorFinder {
 	fn initialize_fields<N: Nodes>(&mut self, nodes: &N, set: Slice, start: usize) {
 		let len = set.ones().count();
 		let last = set.ones().max().map_or(0, |id| id + 1);
+
+		assert_ne!(len, 0, "set must contain at least one element");
 
 		self.dominators.clear();
 		self.dominators.resize(len, usize::MAX);

@@ -11,14 +11,14 @@ struct Item {
 #[derive(Default)]
 pub struct DepthFirstSearcher {
 	items: Vec<Item>,
-	seen: Set,
+	wait: Set,
 }
 
 impl DepthFirstSearcher {
 	pub const fn new() -> Self {
 		Self {
 			items: Vec::new(),
-			seen: Set::new(),
+			wait: Set::new(),
 		}
 	}
 
@@ -27,7 +27,7 @@ impl DepthFirstSearcher {
 		N: Nodes,
 		H: FnMut(usize, bool),
 	{
-		if self.seen.insert(id) {
+		if !self.wait.remove(id) {
 			return;
 		}
 
@@ -41,8 +41,8 @@ impl DepthFirstSearcher {
 	}
 
 	pub fn initialize(&mut self, set: Slice) {
-		self.seen.clear();
-		self.seen.extend(set.zeros());
+		self.wait.clear();
+		self.wait.extend(set.ones());
 	}
 
 	pub fn run<N, H>(&mut self, nodes: &N, start: usize, mut handler: H)

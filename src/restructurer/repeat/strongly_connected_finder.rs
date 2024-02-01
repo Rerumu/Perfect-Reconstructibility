@@ -2,9 +2,11 @@
 // "Path-based depth-first search for strong and biconnected components",
 //     by Harold N. Gabow
 
-use crate::{collection::set::Slice, control_flow::Nodes};
-
-use super::depth_first_searcher::DepthFirstSearcher;
+use crate::{
+	collection::set::{Set, Slice},
+	control_flow::Nodes,
+	restructurer::depth_first_searcher::DepthFirstSearcher,
+};
 
 #[derive(Default)]
 pub struct StronglyConnectedFinder {
@@ -12,7 +14,6 @@ pub struct StronglyConnectedFinder {
 	path: Vec<usize>,
 	stack: Vec<usize>,
 
-	results: Vec<Vec<usize>>,
 	depth_first_searcher: DepthFirstSearcher,
 }
 
@@ -23,7 +24,6 @@ impl StronglyConnectedFinder {
 			path: Vec::new(),
 			stack: Vec::new(),
 
-			results: Vec::new(),
 			depth_first_searcher: DepthFirstSearcher::new(),
 		}
 	}
@@ -34,7 +34,6 @@ impl StronglyConnectedFinder {
 		self.names.clear();
 		self.names.resize(last, usize::MAX);
 
-		self.results.clear();
 		self.depth_first_searcher.initialize(set);
 	}
 
@@ -55,13 +54,13 @@ impl StronglyConnectedFinder {
 		}
 	}
 
-	fn on_post_order(&mut self, id: usize) {
+	fn on_post_order(&mut self, id: usize) -> Option<Set> {
 		let index = self.stack.pop().unwrap();
 
 		if self.names[id] != index {
 			self.stack.push(index);
 
-			return;
+			return None;
 		}
 
 		for &id in &self.path[index..] {
@@ -70,20 +69,22 @@ impl StronglyConnectedFinder {
 
 		let result = self.path.drain(index..);
 
-		if result.len() > 1 {
-			self.results.push(result.collect());
-		}
+		(result.len() > 1).then(|| result.collect())
 	}
 
-	pub fn run<N: Nodes>(&mut self, nodes: &N, set: Slice) -> &mut Vec<Vec<usize>> {
-		self.initialize_fields(set);
-
+	fn run_search<N, H>(&mut self, nodes: &N, set: Slice, mut handler: H)
+	where
+		N: Nodes,
+		H: FnMut(Set),
+	{
 		let mut depth_first_searcher = std::mem::take(&mut self.depth_first_searcher);
 
 		for id in set.ones() {
 			depth_first_searcher.run(nodes, id, |id, post| {
 				if post {
-					self.on_post_order(id);
+					if let Some(component) = self.on_post_order(id) {
+						handler(component);
+					}
 				} else {
 					self.on_pre_order(nodes, id);
 				}
@@ -91,10 +92,17 @@ impl StronglyConnectedFinder {
 		}
 
 		self.depth_first_searcher = depth_first_searcher;
+	}
+
+	pub fn run<N, H>(&mut self, nodes: &N, set: Slice, handler: H)
+	where
+		N: Nodes,
+		H: FnMut(Set),
+	{
+		self.initialize_fields(set);
+		self.run_search(nodes, set, handler);
 
 		debug_assert!(self.path.is_empty(), "path is not empty");
 		debug_assert!(self.stack.is_empty(), "stack is not empty");
-
-		&mut self.results
 	}
 }

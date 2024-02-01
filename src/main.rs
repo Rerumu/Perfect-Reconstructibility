@@ -3,7 +3,7 @@ use std::{iter::Copied, slice::Iter};
 use perfect_reconstructibility::{
 	collection::set::Set,
 	control_flow::{Nodes, NodesMut, Var},
-	restructurer::linear::Linear,
+	restructurer::{branch, repeat},
 };
 
 enum Instruction {
@@ -56,25 +56,11 @@ struct Node {
 	instruction: Instruction,
 }
 
-struct Slice<'nodes> {
-	nodes: &'nodes [Node],
+struct NodeList {
+	nodes: Vec<Node>,
 }
 
-impl<'nodes> Nodes for Slice<'nodes> {
-	fn predecessors(&self, id: usize) -> Copied<Iter<'_, usize>> {
-		self.nodes[id].predecessors.iter().copied()
-	}
-
-	fn successors(&self, id: usize) -> Copied<Iter<'_, usize>> {
-		self.nodes[id].successors.iter().copied()
-	}
-}
-
-struct SliceMut<'nodes> {
-	nodes: &'nodes mut Vec<Node>,
-}
-
-impl SliceMut<'_> {
+impl NodeList {
 	fn add_instruction(&mut self, instruction: Instruction) -> usize {
 		let node = Node {
 			predecessors: Vec::new(),
@@ -94,7 +80,7 @@ impl SliceMut<'_> {
 	}
 }
 
-impl<'nodes> Nodes for SliceMut<'nodes> {
+impl Nodes for NodeList {
 	fn predecessors(&self, id: usize) -> Copied<Iter<'_, usize>> {
 		self.nodes[id].predecessors.iter().copied()
 	}
@@ -104,7 +90,7 @@ impl<'nodes> Nodes for SliceMut<'nodes> {
 	}
 }
 
-impl<'nodes> NodesMut for SliceMut<'nodes> {
+impl NodesMut for NodeList {
 	fn add_no_operation(&mut self) -> usize {
 		self.add_instruction(Instruction::NoOperation)
 	}
@@ -201,7 +187,7 @@ fn write_nodes(nodes: &[Node], writer: &mut dyn std::io::Write) -> std::io::Resu
 	Ok(())
 }
 
-fn load_example_repeat(slice: &mut SliceMut<'_>) -> usize {
+fn load_example_repeat(slice: &mut NodeList) -> (usize, usize) {
 	let node_1 = slice.add_instruction(Instruction::SetInteger { var: "a", value: 1 });
 	let node_2 = slice.add_instruction(Instruction::Selection { var: "a" });
 
@@ -258,10 +244,10 @@ fn load_example_repeat(slice: &mut SliceMut<'_>) -> usize {
 	slice.add_link(node_6, node_11);
 	slice.add_link(node_10, node_11);
 
-	node_1
+	(node_1, node_11)
 }
 
-fn load_example_branch(slice: &mut SliceMut<'_>) -> usize {
+fn load_example_branch(slice: &mut NodeList) -> (usize, usize) {
 	let node_1 = slice.add_instruction(Instruction::GreaterThan {
 		lhs: "y",
 		rhs: "0",
@@ -311,19 +297,29 @@ fn load_example_branch(slice: &mut SliceMut<'_>) -> usize {
 
 	slice.add_link(node_7, node_8);
 
-	node_1
+	(node_1, node_8)
 }
 
 fn main() {
-	let mut nodes = vec![];
-	let mut slice = SliceMut { nodes: &mut nodes };
+	let mut list = NodeList { nodes: Vec::new() };
 
-	let node_1 = load_example_branch(&mut slice);
-	let mut set: Set = (0..slice.nodes.len()).collect();
+	let (br_in, br_out) = load_example_branch(&mut list);
+	let (rp_in, rp_out) = load_example_repeat(&mut list);
+	let entry = list.add_no_operation();
+	let exit = list.add_no_operation();
 
-	write_nodes(slice.nodes, &mut std::io::stdout()).unwrap();
+	list.add_link(entry, br_in);
+	list.add_link(entry, rp_in);
 
-	Linear::new().restructure(&mut slice, &mut set, node_1);
+	list.add_link(br_out, exit);
+	list.add_link(rp_out, exit);
 
-	write_nodes(slice.nodes, &mut std::io::stdout()).unwrap();
+	let mut set: Set = (0..list.nodes.len()).collect();
+
+	write_nodes(&list.nodes, &mut std::io::stdout()).unwrap();
+
+	repeat::bulk::Bulk::new().restructure(&mut list, &mut set);
+	branch::bulk::Bulk::new().restructure(&mut list, &mut set, entry);
+
+	write_nodes(&list.nodes, &mut std::io::stdout()).unwrap();
 }
