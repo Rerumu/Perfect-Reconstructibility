@@ -59,6 +59,42 @@ impl Set {
 	}
 }
 
+impl Clone for Set {
+	fn clone(&self) -> Self {
+		let elements = self.elements.clone();
+
+		Self { elements }
+	}
+
+	fn clone_from(&mut self, source: &Self) {
+		self.elements.clone_from(&source.elements);
+	}
+}
+
+impl Extend<usize> for Set {
+	fn extend<T: IntoIterator<Item = usize>>(&mut self, iter: T) {
+		iter.into_iter().for_each(|index| {
+			self.insert(index);
+		});
+	}
+}
+
+impl FromIterator<usize> for Set {
+	fn from_iter<T: IntoIterator<Item = usize>>(iter: T) -> Self {
+		let mut set = Self::new();
+
+		set.extend(iter);
+
+		set
+	}
+}
+
+impl std::fmt::Debug for Set {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		self.as_slice().fmt(f)
+	}
+}
+
 #[derive(Clone, Copy)]
 pub struct Slice<'a> {
 	elements: &'a [bool],
@@ -87,32 +123,8 @@ impl<'a> Slice<'a> {
 	}
 }
 
-impl Clone for Set {
-	fn clone(&self) -> Self {
-		let elements = self.elements.clone();
-
-		Self { elements }
-	}
-
-	fn clone_from(&mut self, source: &Self) {
-		self.elements.clone_from(&source.elements);
-	}
-}
-
-impl Extend<usize> for Set {
-	fn extend<T: IntoIterator<Item = usize>>(&mut self, iter: T) {
-		iter.into_iter().for_each(|index| {
-			self.insert(index);
-		});
-	}
-}
-
-impl FromIterator<usize> for Set {
-	fn from_iter<T: IntoIterator<Item = usize>>(iter: T) -> Self {
-		let mut set = Self::new();
-
-		set.extend(iter);
-
-		set
+impl std::fmt::Debug for Slice<'_> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_list().entries(self.ones()).finish()
 	}
 }
