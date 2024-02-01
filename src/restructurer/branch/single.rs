@@ -87,6 +87,14 @@ impl Single {
 		}
 	}
 
+	fn patch_single_tail(&mut self, tail: usize) {
+		for branch in &mut self.branches {
+			if let Branch::Full { items, .. } = branch {
+				items.insert(tail);
+			}
+		}
+	}
+
 	fn restructure_full<N: NodesMut>(&mut self, nodes: &mut N, items: &mut Set, exit: usize) {
 		let mut predecessors = Vec::new();
 
@@ -185,17 +193,10 @@ impl Single {
 		self.find_branch_elements(nodes, set, head);
 
 		if let &[exit] = self.continuations.as_slice() {
-			println!("BAILT: {head} -> {exit}");
+			self.patch_single_tail(exit);
 
 			exit
 		} else {
-			println!("TRY: {head}");
-
-			if self.continuations.is_empty() {
-				println!("{:?}", set);
-				println!("{:?}", self.tail);
-			}
-
 			self.restructure_branches(nodes, head)
 		}
 	}
