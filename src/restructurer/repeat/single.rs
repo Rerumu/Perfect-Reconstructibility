@@ -153,10 +153,10 @@ impl Single {
 		self.insertions.clear();
 		self.insertions.push(latch);
 
-		self.restructure_continues(nodes, set, latch);
-
 		let start = self.restructure_start(nodes, set);
 		let end = self.restructure_end(nodes, set, latch);
+
+		self.restructure_continues(nodes, set, latch);
 
 		nodes.add_link(latch, end);
 		nodes.add_link(latch, start);
