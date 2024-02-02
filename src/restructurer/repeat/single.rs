@@ -153,8 +153,17 @@ impl Single {
 		self.insertions.clear();
 		self.insertions.push(latch);
 
-		let start = self.restructure_start(nodes, set);
-		let end = self.restructure_end(nodes, set, latch);
+		let start = if let &[start] = self.point_in.as_slice() {
+			start
+		} else {
+			self.restructure_start(nodes, set)
+		};
+
+		let end = if let &[end] = self.point_out.as_slice() {
+			end
+		} else {
+			self.restructure_end(nodes, set, latch)
+		};
 
 		self.restructure_continues(nodes, set, latch);
 
