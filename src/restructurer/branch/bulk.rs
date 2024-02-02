@@ -1,7 +1,3 @@
-// Resources:
-// "Perfect Reconstructability of Control Flow from Demand Dependence Graphs",
-//     by Helge Bahmann, Google Zurich, Nico Reissmann, Magnus Jahre, and Jan Christian Meyer
-
 use crate::{
 	collection::set::Set,
 	control_flow::{Nodes, NodesMut},
