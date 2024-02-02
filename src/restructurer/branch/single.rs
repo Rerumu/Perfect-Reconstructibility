@@ -33,15 +33,21 @@ impl Single {
 		}
 	}
 
-	fn initialize_branches<N: Nodes>(&mut self, nodes: &N, head: usize) {
+	fn initialize_branches<N: Nodes>(&mut self, nodes: &N, set: Slice, head: usize) {
 		let successors = nodes.successors(head).filter(|&id| id != head).count();
 
 		self.branches.clear();
 		self.branches.reserve_exact(successors);
 
-		// Elements with only head as predecessor are full, otherwise empty
+		self.dominator_finder.run(nodes, set, head);
+
+		// Elements with only head as dominator are full, otherwise empty
 		for start in nodes.successors(head).filter(|&id| id != head) {
-			let branch = if nodes.predecessors(start).all(|id| id == head) {
+			let mut predecessors = nodes
+				.predecessors(start)
+				.filter(|&id| set.get(id) && !self.dominator_finder.is_dominator_of(start, id));
+
+			let branch = if predecessors.next().is_some() && predecessors.next().is_none() {
 				Branch::Full {
 					items: Set::new(),
 					start,
@@ -55,7 +61,6 @@ impl Single {
 	}
 
 	fn find_branch_elements<N: Nodes>(&mut self, nodes: &N, set: Slice, head: usize) {
-		self.dominator_finder.run(nodes, set, head);
 		self.tail.clear();
 
 		// Find all nodes dominated by the branch start
@@ -189,7 +194,7 @@ impl Single {
 	}
 
 	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N, set: Slice, head: usize) -> usize {
-		self.initialize_branches(nodes, head);
+		self.initialize_branches(nodes, set, head);
 		self.find_branch_elements(nodes, set, head);
 
 		self.insertions.clear();
