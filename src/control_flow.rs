@@ -4,6 +4,7 @@ pub trait Nodes {
 	fn successors(&self, id: usize) -> impl Iterator<Item = usize> + '_;
 }
 
+#[derive(Clone, Copy, Debug)]
 pub enum Var {
 	Destination,
 	Repetition,
