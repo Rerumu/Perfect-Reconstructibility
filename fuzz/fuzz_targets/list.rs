@@ -5,12 +5,24 @@ use perfect_reconstructibility::{
 };
 
 #[derive(Clone, Debug)]
-enum Instruction {
+pub enum Instruction {
 	Start,
 	End,
 	Simple,
 	Assign { var: Var, value: usize },
-	Branch { var: Var },
+	Select { var: Var },
+}
+
+impl std::fmt::Display for Instruction {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Start => write!(f, "Start"),
+			Self::End => write!(f, "End"),
+			Self::Simple => write!(f, "Simple"),
+			Self::Assign { var, value } => write!(f, "{var:?} := {value}"),
+			Self::Select { var } => write!(f, "Select {var:?}"),
+		}
+	}
 }
 
 #[derive(Clone)]
@@ -23,6 +35,7 @@ struct Node {
 
 pub struct List {
 	nodes: Vec<Node>,
+	synthetic: bool,
 }
 
 impl std::fmt::Debug for List {
@@ -56,20 +69,38 @@ impl std::fmt::Debug for List {
 }
 
 impl List {
-	fn add_instruction(&mut self, instruction: Instruction) -> usize {
+	pub const fn new() -> Self {
+		Self {
+			nodes: Vec::new(),
+			synthetic: false,
+		}
+	}
+
+	pub fn with_capacity(capacity: usize) -> Self {
+		Self {
+			nodes: Vec::with_capacity(capacity),
+			synthetic: false,
+		}
+	}
+
+	pub fn ids(&self) -> Set {
+		(0..self.nodes.len()).collect()
+	}
+
+	pub fn add_instruction(&mut self, instruction: Instruction) -> usize {
 		let node = Node {
 			predecessors: Vec::new(),
 			successors: Vec::new(),
 			instruction,
-			synthetic: true,
+			synthetic: self.synthetic,
 		};
 
 		self.nodes.push(node);
 		self.nodes.len() - 1
 	}
 
-	pub fn ids(&self) -> Set {
-		(0..self.nodes.len()).collect()
+	pub fn set_synthetic(&mut self, synthetic: bool) {
+		self.synthetic = synthetic;
 	}
 }
 
@@ -93,7 +124,7 @@ impl NodesMut for List {
 	}
 
 	fn add_selection(&mut self, var: Var) -> usize {
-		self.add_instruction(Instruction::Branch { var })
+		self.add_instruction(Instruction::Select { var })
 	}
 
 	fn add_link(&mut self, from: usize, to: usize) {
@@ -123,24 +154,19 @@ impl NodesMut for List {
 
 impl Arbitrary<'_> for List {
 	fn arbitrary(u: &mut Unstructured<'_>) -> Result<Self, arbitrary::Error> {
-		let mut list = Self {
-			nodes: vec![
-				Node {
-					predecessors: Vec::new(),
-					successors: Vec::new(),
-					instruction: Instruction::Simple,
-					synthetic: false,
-				};
-				u.arbitrary_len::<u64>()?.max(2)
-			],
-		};
+		let len = u.arbitrary_len::<u64>()?.max(2);
+		let mut list = Self::with_capacity(len);
+
+		for id in 0..len {
+			list.add_no_operation();
+
+			if let Some(last) = id.checked_sub(1) {
+				list.add_link(last, id);
+			}
+		}
 
 		list.nodes.first_mut().unwrap().instruction = Instruction::Start;
 		list.nodes.last_mut().unwrap().instruction = Instruction::End;
-
-		for id in 1..list.nodes.len() {
-			list.add_link(id - 1, id);
-		}
 
 		for _ in 0..u.arbitrary_len::<(usize, usize)>()? {
 			let a = u.choose_index(list.nodes.len())?.max(1);
@@ -152,6 +178,8 @@ impl Arbitrary<'_> for List {
 				list.add_link(a.max(b), a.min(b));
 			}
 		}
+
+		list.set_synthetic(true);
 
 		Ok(list)
 	}
