@@ -48,15 +48,15 @@ impl Bulk {
 
 		self.branches.push((tail, exit));
 
-		let iter = self.single.branches_mut().drain(..).filter_map(|branch| {
+		let branches = self.single.branches_mut().drain(..);
+
+		self.branches.extend(branches.filter_map(|branch| {
 			if let Branch::Full { items, start } = branch {
 				Some((items, start))
 			} else {
 				None
 			}
-		});
-
-		self.branches.extend(iter);
+		}));
 	}
 
 	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N, set: &mut Set, mut start: usize) {
