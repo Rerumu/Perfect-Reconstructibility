@@ -34,13 +34,13 @@ impl Single {
 	}
 
 	fn initialize_branches<N: Nodes>(&mut self, nodes: &N, head: usize) {
-		let successors = nodes.successors(head).count();
+		let successors = nodes.successors(head).filter(|&id| id != head).count();
 
 		self.branches.clear();
 		self.branches.reserve_exact(successors);
 
 		// Elements with only head as predecessor are full, otherwise empty
-		for start in nodes.successors(head) {
+		for start in nodes.successors(head).filter(|&id| id != head) {
 			let branch = if nodes.predecessors(start).all(|id| id == head) {
 				Branch::Full {
 					items: Set::new(),

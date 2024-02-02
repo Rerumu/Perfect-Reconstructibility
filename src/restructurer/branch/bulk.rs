@@ -29,7 +29,7 @@ impl Bulk {
 				return None;
 			}
 
-			let mut successors = nodes.successors(start);
+			let mut successors = nodes.successors(start).filter(|&id| start != id);
 			let successor = successors.next()?;
 
 			if successors.next().is_some() {
