@@ -178,10 +178,12 @@ impl Single {
 		&self.insertions
 	}
 
+	#[must_use]
 	pub fn tail_mut(&mut self) -> &mut Set {
 		&mut self.tail
 	}
 
+	#[must_use]
 	pub fn branches_mut(&mut self) -> &mut Vec<Branch> {
 		&mut self.branches
 	}
