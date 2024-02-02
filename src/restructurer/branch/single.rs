@@ -33,35 +33,30 @@ impl Single {
 		}
 	}
 
-	fn initialize_fields<N: Nodes>(&mut self, nodes: &N, head: usize) {
+	fn initialize_branches<N: Nodes>(&mut self, nodes: &N, head: usize) {
 		let successors = nodes.successors(head).count();
-		let construct = || Branch::Empty { tail: usize::MAX };
-
-		self.tail.clear();
-		self.continuations.clear();
 
 		self.branches.clear();
-		self.branches.resize_with(successors, construct);
+		self.branches.reserve_exact(successors);
 
-		self.insertions.clear();
-	}
-
-	fn initialize_branches<N: Nodes>(&mut self, nodes: &N, head: usize) {
 		// Elements with only head as predecessor are full, otherwise empty
-		for (branch, start) in self.branches.iter_mut().zip(nodes.successors(head)) {
-			*branch = if nodes.predecessors(start).all(|id| id == head) {
+		for start in nodes.successors(head) {
+			let branch = if nodes.predecessors(start).all(|id| id == head) {
 				Branch::Full {
 					items: Set::new(),
 					start,
 				}
 			} else {
 				Branch::Empty { tail: start }
-			}
+			};
+
+			self.branches.push(branch);
 		}
 	}
 
 	fn find_branch_elements<N: Nodes>(&mut self, nodes: &N, set: Slice, head: usize) {
 		self.dominator_finder.run(nodes, set, head);
+		self.tail.clear();
 
 		// Find all nodes dominated by the branch start
 		'dominated: for id in set.ones() {
@@ -79,6 +74,7 @@ impl Single {
 		}
 
 		self.tail.remove(head);
+		self.continuations.clear();
 
 		for tail in self.tail.ones() {
 			if nodes
@@ -103,11 +99,11 @@ impl Single {
 
 		// Find all tail connections
 		for &tail in &self.continuations {
-			let exits = nodes
-				.predecessors(tail)
-				.filter_map(|predecessor| items.get(predecessor).then_some((predecessor, tail)));
-
-			predecessors.extend(exits);
+			predecessors.extend(
+				nodes.predecessors(tail).filter_map(|predecessor| {
+					items.get(predecessor).then_some((predecessor, tail))
+				}),
+			);
 		}
 
 		// If there is more than one tail connection, add a funnel
@@ -191,9 +187,10 @@ impl Single {
 	}
 
 	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N, set: Slice, head: usize) -> usize {
-		self.initialize_fields(nodes, head);
 		self.initialize_branches(nodes, head);
 		self.find_branch_elements(nodes, set, head);
+
+		self.insertions.clear();
 
 		if let &[exit] = self.continuations.as_slice() {
 			self.patch_single_tail(exit);
