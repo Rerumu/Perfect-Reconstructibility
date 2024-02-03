@@ -21,7 +21,7 @@ pub struct Single {
 	point_in: Vec<usize>,
 	point_out: Vec<usize>,
 
-	insertions: Vec<usize>,
+	synthetics: Vec<usize>,
 }
 
 impl Single {
@@ -31,11 +31,11 @@ impl Single {
 			point_in: Vec::new(),
 			point_out: Vec::new(),
 
-			insertions: Vec::new(),
+			synthetics: Vec::new(),
 		}
 	}
 
-	fn find_set_bonds<N: Nodes>(&mut self, nodes: &N, set: Slice) -> (&[usize], &[usize]) {
+	fn find_ins_and_outs<N: Nodes>(&mut self, nodes: &N, set: Slice) {
 		self.point_in.clear();
 		self.point_out.clear();
 
@@ -48,24 +48,20 @@ impl Single {
 				self.point_out.push(id);
 			}
 		}
-
-		self.point_in.sort_unstable();
-		self.point_out.sort_unstable();
-
-		(&self.point_in, &self.point_out)
 	}
 
 	fn find_start_if_structured<N: Nodes>(&mut self, nodes: &N, set: Slice) -> Option<usize> {
-		let (point_in, point_out) = self.find_set_bonds(nodes, set);
+		self.find_ins_and_outs(nodes, set);
 
-		if point_in.len() > 1 || point_out.len() > 1 {
-			return None;
+		if let &[start] = self.point_in.as_slice() {
+			if self.point_out.len() <= 1
+				&& nodes.predecessors(start).filter(|&id| set.get(id)).count() == 1
+			{
+				return Some(start);
+			}
 		}
 
-		let start = point_in.first().copied().expect("entry point should exist");
-		let repeats = nodes.predecessors(start).filter(|&id| set.get(id)).count();
-
-		(repeats == 1).then_some(start)
+		None
 	}
 
 	fn restructure_continues<N: NodesMut>(&mut self, nodes: &mut N, set: Slice, latch: usize) {
@@ -85,8 +81,8 @@ impl Single {
 				nodes.add_link(destination, repetition);
 				nodes.add_link(repetition, latch);
 
-				self.insertions.push(destination);
-				self.insertions.push(repetition);
+				self.synthetics.push(destination);
+				self.synthetics.push(repetition);
 			}
 		}
 	}
@@ -94,7 +90,7 @@ impl Single {
 	fn restructure_start<N: NodesMut>(&mut self, nodes: &mut N, set: Slice) -> usize {
 		let selection = nodes.add_selection(Var::Destination);
 
-		self.insertions.push(selection);
+		self.synthetics.push(selection);
 
 		// Predecessor -> Entry
 		// Predecessor -> Destination -> Selection -> Entry
@@ -110,7 +106,7 @@ impl Single {
 				nodes.replace_link(predecessor, entry, destination);
 				nodes.add_link(destination, selection);
 
-				self.insertions.push(destination);
+				self.synthetics.push(destination);
 			}
 
 			nodes.add_link(selection, entry);
@@ -122,7 +118,7 @@ impl Single {
 	fn restructure_end<N: NodesMut>(&mut self, nodes: &mut N, set: Slice, latch: usize) -> usize {
 		let selection = nodes.add_selection(Var::Destination);
 
-		self.insertions.push(selection);
+		self.synthetics.push(selection);
 
 		// Exit -> Successor
 		// Exit -> Destination -> Repetition -> Latch -> Selection -> Successor
@@ -139,8 +135,8 @@ impl Single {
 				nodes.add_link(destination, repetition);
 				nodes.add_link(repetition, latch);
 
-				self.insertions.push(destination);
-				self.insertions.push(repetition);
+				self.synthetics.push(destination);
+				self.synthetics.push(repetition);
 			}
 		}
 
@@ -148,21 +144,21 @@ impl Single {
 	}
 
 	#[must_use]
-	pub fn insertions(&self) -> &[usize] {
-		&self.insertions
+	pub fn synthetics(&self) -> &[usize] {
+		&self.synthetics
 	}
 
 	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N, set: Slice) -> usize {
 		if let Some(start) = self.find_start_if_structured(nodes, set) {
-			self.insertions.clear();
+			self.synthetics.clear();
 
 			return start;
 		}
 
 		let latch = nodes.add_selection(Var::Repetition);
 
-		self.insertions.clear();
-		self.insertions.push(latch);
+		self.synthetics.clear();
+		self.synthetics.push(latch);
 
 		let start = if let &[start] = self.point_in.as_slice() {
 			start
@@ -170,16 +166,12 @@ impl Single {
 			self.restructure_start(nodes, set)
 		};
 
-		let end = if let &[end] = self.point_out.as_slice() {
-			end
-		} else {
-			self.restructure_end(nodes, set, latch)
-		};
+		let end = self.restructure_end(nodes, set, latch);
 
 		self.restructure_continues(nodes, set, latch);
 
-		nodes.add_link(latch, end);
 		nodes.add_link(latch, start);
+		nodes.add_link(latch, end);
 
 		start
 	}

@@ -45,7 +45,7 @@ impl Bulk {
 
 			self.set.remove(start);
 
-			set.extend(self.single.insertions().iter().copied());
+			set.extend(self.single.synthetics().iter().copied());
 		}
 	}
 }
