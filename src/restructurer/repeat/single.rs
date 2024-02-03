@@ -36,8 +36,6 @@ impl Single {
 			}
 		}
 
-		assert!(!self.point_in.is_empty(), "no entry points found");
-
 		self.point_in.sort_unstable();
 		self.point_out.sort_unstable();
 
@@ -51,7 +49,7 @@ impl Single {
 			return None;
 		}
 
-		let start = point_in.first().copied().expect("nodes should be an SCC");
+		let start = point_in.first().copied().expect("entry point should exist");
 		let repeats = nodes.predecessors(start).filter(|&id| set.get(id)).count();
 
 		(repeats == 1).then_some(start)
