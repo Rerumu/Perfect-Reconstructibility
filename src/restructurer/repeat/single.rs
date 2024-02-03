@@ -3,6 +3,19 @@ use crate::{
 	control_flow::{Nodes, NodesMut, Var},
 };
 
+/// A Repeat `R` is structured when it is all of the following:
+/// - In `R`, there exists `A`, the single entry point.
+/// - In `R`, there may exist `B`, the single exit point.
+/// - `A` has a single predecessor, which is `B` if it exists, or any node in `R` otherwise.
+///
+/// Let `E` be the set of entry points and `X` be the set of exit points.
+///
+/// - If `|E| > 1`, let `A` be a new selection, funnel all predecessors of `E` not in `R` to `A`, and funnel `A` to `E`.
+/// - If `|X| > 1`, let `B` be a new selection, funnel all successors of `X` not in `R` to `B`, and funnel `B` to all successors of `X` not in `R`.
+/// - If `A` has a predecessor in `R` that is not `B`, let `D` be a new selection,
+/// funnel relevant predecessors of `A` to `D`,
+/// funnel all predecessors of `B` to `D`,
+/// fork `D` to `A` and `B`.
 #[derive(Default)]
 pub struct Single {
 	point_in: Vec<usize>,
