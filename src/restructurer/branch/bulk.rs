@@ -9,7 +9,7 @@ pub struct Bulk {
 	single: Single,
 
 	set: Set,
-	branches: Vec<(Set, usize)>,
+	branches: Vec<Branch>,
 }
 
 impl Bulk {
@@ -43,20 +43,16 @@ impl Bulk {
 	}
 
 	fn restructure_branch<N: NodesMut>(&mut self, nodes: &mut N, head: usize) {
-		let exit = self.single.restructure(nodes, self.set.as_slice(), head);
-		let tail = std::mem::take(self.single.tail_mut());
+		if let Some(exit) = self.single.restructure(nodes, self.set.as_slice(), head) {
+			let tail = std::mem::take(self.single.tail_mut());
 
-		self.branches.push((tail, exit));
+			self.branches.push(Branch {
+				set: tail,
+				start: exit,
+			});
+		}
 
-		let branches = self.single.branches_mut().drain(..);
-
-		self.branches.extend(branches.filter_map(|branch| {
-			if let Branch::Full { items, start } = branch {
-				Some((items, start))
-			} else {
-				None
-			}
-		}));
+		self.branches.append(self.single.branches_mut());
 	}
 
 	pub fn restructure<N: NodesMut>(&mut self, nodes: &mut N, set: &mut Set, mut start: usize) {
@@ -66,13 +62,13 @@ impl Bulk {
 			if let Some(head) = self.find_branch_head(nodes, start) {
 				self.restructure_branch(nodes, head);
 
-				set.extend(self.single.insertions().iter().copied());
+				set.extend(self.single.synthetics().iter().copied());
 			}
 
-			if let Some((set, next)) = self.branches.pop() {
-				self.set.clone_from(&set);
+			if let Some(branch) = self.branches.pop() {
+				self.set.clone_from(&branch.set);
 
-				start = next;
+				start = branch.start;
 			} else {
 				break;
 			}
