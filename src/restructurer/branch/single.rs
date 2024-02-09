@@ -118,44 +118,66 @@ impl Single {
 		}
 	}
 
-	fn restructure_full<N: NodesMut>(&mut self, nodes: &mut N, items: &mut Set, exit: usize) {
-		let mut continuations = Vec::new();
+	fn add_no_operation<N: NodesMut>(&mut self, nodes: &mut N, items: &mut Set) -> usize {
+		let funnel = nodes.add_no_operation();
 
+		items.insert(funnel);
+		self.synthetics.push(funnel);
+
+		funnel
+	}
+
+	fn add_variable<N: NodesMut>(&mut self, nodes: &mut N, items: &mut Set, tail: usize) -> usize {
+		let variable = self.continuations.binary_search(&tail).unwrap();
+		let destination = nodes.add_variable(Var::Branch, variable);
+
+		items.insert(destination);
+		self.synthetics.push(destination);
+
+		destination
+	}
+
+	fn find_branch_continuations<N: Nodes>(&self, items: Slice, nodes: &N) -> Vec<usize> {
+		self.continuations
+			.iter()
+			.copied()
+			.filter(|&id| nodes.predecessors(id).any(|id| items.get(id)))
+			.collect()
+	}
+
+	fn restructure_full<N: NodesMut>(&mut self, nodes: &mut N, items: &mut Set, exit: usize) {
 		// Find all tail connections
-		for &tail in &self.continuations {
-			continuations.extend(
-				nodes.predecessors(tail).filter_map(|predecessor| {
-					items.get(predecessor).then_some((predecessor, tail))
-				}),
-			);
-		}
+		let mut continuations = self.find_branch_continuations(items.as_slice(), nodes);
 
 		// If there is more than one tail connection, add a funnel
 		let funnel = match continuations.len() {
 			0 => return,
 			1 => exit,
 			_ => {
-				let temp = nodes.add_no_operation();
+				let funnel = self.add_no_operation(nodes, items);
 
-				nodes.add_link(temp, exit);
+				nodes.add_link(funnel, exit);
 
-				items.insert(temp);
-				self.synthetics.push(temp);
-
-				temp
+				funnel
 			}
 		};
 
+		continuations.sort_unstable();
+		continuations.dedup();
+
 		// Replace all tail connections with the funnel
-		for (predecessor, tail) in continuations {
-			let variable = self.continuations.binary_search(&tail).unwrap();
-			let destination = nodes.add_variable(Var::Branch, variable);
+		for tail in continuations {
+			let destination = self.add_variable(nodes, items, tail);
+			let predecessors: Vec<_> = nodes
+				.predecessors(tail)
+				.filter(|&id| items.get(id))
+				.collect();
 
-			nodes.replace_link(predecessor, tail, destination);
+			for predecessor in predecessors {
+				nodes.replace_link(predecessor, tail, destination);
+			}
+
 			nodes.add_link(destination, funnel);
-
-			items.insert(destination);
-			self.synthetics.push(destination);
 		}
 	}
 

@@ -59,22 +59,23 @@ impl Single {
 		// Predecessor -> Entry
 		// Predecessor -> Destination -> Repetition -> Latch -> Selection -> Entry
 		for (index, &entry) in self.point_in.iter().enumerate() {
+			let destination = nodes.add_variable(Var::Destination, index);
+			let repetition = nodes.add_variable(Var::Repetition, 1);
+
 			let predecessors: Vec<_> = nodes
 				.predecessors(entry)
 				.filter(|&id| set.get(id))
 				.collect();
 
 			for predecessor in predecessors {
-				let destination = nodes.add_variable(Var::Destination, index);
-				let repetition = nodes.add_variable(Var::Repetition, 1);
-
 				nodes.replace_link(predecessor, entry, destination);
-				nodes.add_link(destination, repetition);
-				nodes.add_link(repetition, latch);
-
-				self.synthetics.push(destination);
-				self.synthetics.push(repetition);
 			}
+
+			nodes.add_link(destination, repetition);
+			nodes.add_link(repetition, latch);
+
+			self.synthetics.push(destination);
+			self.synthetics.push(repetition);
 		}
 	}
 
@@ -86,21 +87,20 @@ impl Single {
 		// Predecessor -> Entry
 		// Predecessor -> Destination -> Selection -> Entry
 		for (index, &entry) in self.point_in.iter().enumerate() {
+			let destination = nodes.add_variable(Var::Destination, index);
 			let predecessors: Vec<_> = nodes
 				.predecessors(entry)
 				.filter(|&id| !set.get(id))
 				.collect();
 
 			for predecessor in predecessors {
-				let destination = nodes.add_variable(Var::Destination, index);
-
 				nodes.replace_link(predecessor, entry, destination);
-				nodes.add_link(destination, selection);
-
-				self.synthetics.push(destination);
 			}
 
+			nodes.add_link(destination, selection);
 			nodes.add_link(selection, entry);
+
+			self.synthetics.push(destination);
 		}
 
 		selection
@@ -114,21 +114,20 @@ impl Single {
 		// Exit -> Successor
 		// Exit -> Destination -> Repetition -> Latch -> Selection -> Successor
 		for (index, &exit) in self.point_out.iter().enumerate() {
+			let destination = nodes.add_variable(Var::Destination, index);
+			let repetition = nodes.add_variable(Var::Repetition, 0);
 			let successors: Vec<_> = nodes.successors(exit).filter(|&id| !set.get(id)).collect();
 
 			for successor in successors {
-				let destination = nodes.add_variable(Var::Destination, index);
-				let repetition = nodes.add_variable(Var::Repetition, 0);
-
 				nodes.replace_link(exit, successor, destination);
 				nodes.add_link(selection, successor);
-
-				nodes.add_link(destination, repetition);
-				nodes.add_link(repetition, latch);
-
-				self.synthetics.push(destination);
-				self.synthetics.push(repetition);
 			}
+
+			nodes.add_link(destination, repetition);
+			nodes.add_link(repetition, latch);
+
+			self.synthetics.push(destination);
+			self.synthetics.push(repetition);
 		}
 
 		selection
